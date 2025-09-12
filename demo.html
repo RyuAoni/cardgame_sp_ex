@@ -28,12 +28,12 @@
     </div>
 
     <!-- ログイン画面 (最初はこれを表示) -->
-    <div id="login-section" class="min-h-screen flex items-center justify-center">
+    <div id="login-section" class="min-h-screen flex items-center justify-center p-4">
         <div class="bg-white p-8 rounded-2xl shadow-lg w-full max-w-md">
             <h1 class="text-3xl font-bold text-center text-green-600 mb-2">足跡百景</h1>
             <p class="text-center text-gray-500 mb-6">ログインして、お絵かきを始めよう</p>
-            <input type="email" id="login-email" placeholder="メールアドレス" class="w-full p-3 mb-4 border rounded-lg" value="test@example.com">
-            <input type="password" id="login-password" placeholder="パスワード" class="w-full p-3 mb-4 border rounded-lg" value="password">
+            <input type="email" id="login-email" placeholder="メールアドレス" class="w-full p-3 mb-4 border rounded-lg" value="">
+            <input type="password" id="login-password" placeholder="パスワード" class="w-full p-3 mb-4 border rounded-lg" value="">
             <button id="login-button" class="w-full bg-green-500 hover:bg-green-600 text-white p-3 rounded-lg font-bold">ログイン</button>
             <p id="login-error" class="text-red-500 mt-4 text-center h-4"></p>
             <p class="text-center text-sm text-gray-500 mt-4">
@@ -72,6 +72,8 @@
     // --- グローバル変数 ---
     let map, polyline, token = null, isDrawing = false, currentArtworkId = null;
     let points = [];
+    let watchId = null; // GPS追跡を管理するためのID
+    let currentUserMarker = null; // 現在地を示すマーカー
 
     // --- DOM要素 ---
     const loginSection = document.getElementById('login-section');
@@ -140,43 +142,89 @@
     
     // --- 地図・お絵かき ---
     function initMap() {
-        if (map) map.remove(); // 既存のマップを削除
+        if (map) map.remove(); 
         map = L.map('map').setView([34.07, 134.55], 13); // 初期位置を徳島に
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
         
+        // ★★★ 現在地を示すためのマーカーを追加 ★★★
+        currentUserMarker = L.circleMarker([0,0], { radius: 8, color: 'blue', fillColor: '#3498db', fillOpacity: 0.8 }).addTo(map);
+
         navigator.geolocation.getCurrentPosition(
-            (pos) => map.setView([pos.coords.latitude, pos.coords.longitude], 16),
-            () => console.warn('現在地を取得できませんでした。')
+            (pos) => {
+                const latLng = [pos.coords.latitude, pos.coords.longitude];
+                map.setView(latLng, 16);
+                currentUserMarker.setLatLng(latLng); // マーカーを現在地に移動
+            },
+            () => console.warn('現在地を取得できませんでした。'),
+            { enableHighAccuracy: true }
         );
 
         polyline = L.polyline([], { color: '#14BE6F', weight: 5 }).addTo(map);
-        
-        map.on('mousemove', (e) => {
-            if (isDrawing) {
-                const newPoint = { latitude: e.latlng.lat, longitude: e.latlng.lng };
-                points.push(newPoint);
-                polyline.addLatLng(e.latlng);
-            }
-        });
     }
 
     async function handleStartDrawing() {
         try {
             const data = await apiFetch('/create_artwork.php', { method: 'POST' });
             currentArtworkId = data.artwork_id;
-            isDrawing = true;
             points = [];
             polyline.setLatLngs([]);
+            document.getElementById('result-area').innerHTML = '';
+            
+            // ★★★ GPS追跡を開始 ★★★
+            if (!navigator.geolocation) {
+                alert('お使いのブラウザはGPS機能に対応していません。');
+                return;
+            }
+
+            watchId = navigator.geolocation.watchPosition(
+                // 成功時のコールバック
+                (position) => {
+                    const lat = position.coords.latitude;
+                    const lng = position.coords.longitude;
+                    const latLng = [lat, lng];
+
+                    // 現在地マーカーを更新
+                    currentUserMarker.setLatLng(latLng);
+                    map.panTo(latLng); // 地図を現在地に滑らかに移動
+
+                    // お絵かき中であれば、点を記録して線を描画
+                    if (isDrawing) {
+                        const newPoint = { latitude: lat, longitude: lng };
+                        points.push(newPoint);
+                        polyline.addLatLng(latLng);
+                    }
+                },
+                // エラー時のコールバック
+                (error) => {
+                    console.error("GPS Error:", error.message);
+                    alert("GPSの測位に失敗しました。場所の権限が許可されているか確認してください。");
+                    handleStopDrawing(); // エラー時は描画を停止
+                },
+                // オプション
+                {
+                    enableHighAccuracy: true, // 高精度モードを有効に
+                    timeout: 10000,           // 10秒でタイムアウト
+                    maximumAge: 0             // 古い位置情報を利用しない
+                }
+            );
+
+            isDrawing = true;
             document.getElementById('start-button').disabled = true;
             document.getElementById('stop-button').disabled = false;
-            document.getElementById('result-area').innerHTML = '';
-            alert(`お絵かきを開始しました！(作品ID: ${currentArtworkId}) 地図上をマウスでなぞって軌跡を描いてください。`);
+            alert(`お絵かきを開始しました！(作品ID: ${currentArtworkId})`);
+
         } catch (error) {
             alert(`エラー: ${error.message}`);
         }
     }
 
     async function handleStopDrawing() {
+        // ★★★ GPS追跡を停止 ★★★
+        if (watchId) {
+            navigator.geolocation.clearWatch(watchId);
+            watchId = null;
+        }
+        
         if (!isDrawing) return;
         isDrawing = false;
         
@@ -197,6 +245,7 @@
             document.getElementById('stop-button').disabled = true;
             
             const resultArea = document.getElementById('result-area');
+            // ★★★ 画像URLを正しく組み立てる ★★★
             const imageUrl = `http://${location.hostname}${data.image_url}`;
             resultArea.innerHTML = `
                 <h3 class="text-lg font-bold">作品が完成しました！</h3>
