@@ -28,7 +28,7 @@
 
     <!-- ログイン画面 -->
     <div id="login-section" class="min-h-screen flex items-center justify-center p-4">
-        <!-- (ログインフォームのHTMLは変更なし) -->
+        <!-- JavaScriptで動的に生成 -->
     </div>
 
     <!-- メインアプリケーション画面 (ログイン後に表示) -->
@@ -70,6 +70,11 @@
 
     // --- グローバル変数 ---
     let token = null;
+    let map, polyline, isDrawing = false, currentArtworkId = null;
+    let points = [];
+    let watchId = null;
+    let currentUserMarker = null;
+    let lastPage = 'gallery';
 
     // --- DOM要素 ---
     const loginSection = document.getElementById('login-section');
@@ -85,7 +90,6 @@
     
     // --- イベントリスナー ---
     document.addEventListener('DOMContentLoaded', () => {
-        // ログイン画面のHTMLを動的に生成
         loginSection.innerHTML = `
             <div class="bg-white p-8 rounded-2xl shadow-lg w-full max-w-md">
                 <h1 class="text-3xl font-bold text-center text-green-600 mb-2">足跡百景</h1>
@@ -100,7 +104,6 @@
             </div>`;
         document.getElementById('login-button').addEventListener('click', handleLogin);
         
-        // ナビゲーションリンクのイベントリスナー
         document.getElementById('logout-button').addEventListener('click', handleLogout);
         document.getElementById('nav-home').addEventListener('click', (e) => { e.preventDefault(); showGalleryPage(); });
         document.getElementById('nav-gallery').addEventListener('click', (e) => { e.preventDefault(); showGalleryPage(); });
@@ -108,12 +111,11 @@
         document.getElementById('nav-template').addEventListener('click', (e) => { e.preventDefault(); showTemplatePage(); });
         document.getElementById('nav-my-page').addEventListener('click', (e) => { e.preventDefault(); showMyPage(); });
 
-        // 自動ログイン試行
         token = localStorage.getItem('ashidori_token');
         if (token) {
             loginSection.classList.add('hidden');
             appContainer.classList.remove('hidden');
-            showGalleryPage(); // トップページはギャラリー
+            showGalleryPage();
         } else {
             loginSection.classList.remove('hidden');
             appContainer.classList.add('hidden');
@@ -133,25 +135,55 @@
 
     // --- API通信 ---
     async function apiFetch(endpoint, options = {}) {
-        // (API通信のコードは変更なし)
+        showLoading();
+        try {
+            const headers = { 'Content-Type': 'application/json', ...options.headers };
+            if (token) {
+                headers['Authorization'] = `Bearer ${token}`;
+            }
+            const response = await fetch(`${API_BASE_URL}${endpoint}`, { ...options, headers });
+            const result = await response.json();
+            if (!response.ok) throw new Error(result.error || '不明なエラーが発生しました。');
+            return result;
+        } catch (error) {
+            console.error('API Error:', error);
+            throw error;
+        } finally {
+            hideLoading();
+        }
     }
 
     // --- 認証ハンドラ ---
     async function handleLogin() {
-        // (ログイン処理は変更なし、成功時にlocalStorageに保存する処理を追加)
-        // ...
-        localStorage.setItem('ashidori_token', data.token); // トークンを保存
-        // ...
+        const email = document.getElementById('login-email').value;
+        const password = document.getElementById('login-password').value;
+        const errorEl = document.getElementById('login-error');
+        errorEl.textContent = '';
+        try {
+            const data = await apiFetch('/login.php', {
+                method: 'POST',
+                body: JSON.stringify({ email, password })
+            });
+            token = data.token;
+            localStorage.setItem('ashidori_token', data.token);
+            loginSection.classList.add('hidden');
+            appContainer.classList.remove('hidden');
+            document.getElementById('user-name-display').textContent = `ようこそ、${data.user.user_name}さん`;
+            showGalleryPage();
+        } catch (error) {
+            errorEl.textContent = error.message;
+        }
     }
 
     function handleLogout() {
         token = null;
-        localStorage.removeItem('ashidori_token'); // トークンを削除
-        location.reload(); // ページをリロードしてログイン画面に戻す
+        localStorage.removeItem('ashidori_token');
+        location.reload();
     }
     
     // --- ページ表示ロジック ---
     async function showGalleryPage() {
+        lastPage = 'gallery';
         showSection('gallery');
         sections.gallery.innerHTML = `<div class="text-center p-8">読み込み中...</div>`;
         try {
@@ -164,7 +196,7 @@
                     galleryHtml += `
                         <div class="cursor-pointer group" onclick="showArtworkDetailPage(${art.artwork_id})">
                             <div class="bg-white rounded-lg shadow-md overflow-hidden transform hover:scale-105 transition-transform">
-                                <img src="http://${location.hostname}${art.thumbnail_url}" alt="作品${art.artwork_id}" class="w-full h-48 object-cover">
+                                <img src="http://${location.hostname}${art.thumbnail_url}" alt="作品${art.artwork_id}" class="w-full h-48 object-cover bg-gray-200">
                                 <div class="p-3">
                                     <p class="font-bold truncate group-hover:text-green-600">${art.artwork_title || '無題の作品'}</p>
                                     <p class="text-sm text-gray-500">${art.user_name}</p>
@@ -182,6 +214,7 @@
     }
 
     async function showArtworkDetailPage(artworkId, isMyPage = false) {
+        lastPage = isMyPage ? 'myPage' : 'gallery';
         showSection('artworkDetail');
         sections.artworkDetail.innerHTML = `<div class="text-center p-8">読み込み中...</div>`;
         try {
@@ -197,7 +230,7 @@
             sections.artworkDetail.innerHTML = `
                 <div class="bg-white p-6 rounded-lg shadow-md">
                     <button onclick="goBack()" class="mb-4 bg-gray-200 hover:bg-gray-300 px-4 py-2 rounded-lg text-sm">&lt; 戻る</button>
-                    <img src="http://${location.hostname}${art.image_url}" class="w-full rounded-lg shadow-sm" alt="${art.artwork_title}">
+                    <img src="http://${location.hostname}${art.image_url}" class="w-full rounded-lg shadow-sm bg-gray-200" alt="${art.artwork_title}">
                     <h2 class="text-3xl font-bold mt-4">${art.artwork_title || '無題の作品'}</h2>
                     ${userHtml}
                     <p class="text-sm text-gray-500 mt-1">作成日: ${new Date(art.created_at).toLocaleString()}</p>
@@ -210,14 +243,13 @@
     }
     
     function goBack() {
-        // 簡易的な戻る機能
-        showSection(lastPage);
+        if (lastPage === 'myPage') showMyPage();
+        else showGalleryPage();
     }
-    let lastPage = 'gallery'; // 戻るボタンのための変数
 
     function showDrawPage() {
+        lastPage = 'draw';
         showSection('map');
-        // (お絵かき画面のHTMLとJSをここに移動)
         sections.map.innerHTML = `
             <div class="bg-white p-6 rounded-lg shadow-md h-full flex flex-col">
                 <div class="flex flex-col sm:flex-row justify-center items-center gap-4 mb-4">
@@ -227,13 +259,13 @@
                 <div id="map" class="flex-grow"></div>
                 <div id="result-area" class="mt-4 text-center"></div>
             </div>`;
-        // イベントリスナーの再設定
         document.getElementById('start-button').addEventListener('click', handleStartDrawing);
         document.getElementById('stop-button').addEventListener('click', handleStopDrawing);
         initMap();
     }
 
     function showTemplatePage() {
+        lastPage = 'template';
         showSection('template');
         sections.template.innerHTML = `
             <div class="bg-white p-8 rounded-lg shadow-md text-center">
@@ -244,6 +276,7 @@
     }
 
     async function showMyPage() {
+        lastPage = 'myPage';
         showSection('myPage');
         sections.myPage.innerHTML = `<div class="text-center p-8">読み込み中...</div>`;
         try {
@@ -259,7 +292,7 @@
                      myGalleryHtml += `
                         <div class="cursor-pointer group" onclick="showArtworkDetailPage(${art.artwork_id}, true)">
                              <div class="bg-white rounded-lg shadow-md overflow-hidden transform hover:scale-105 transition-transform">
-                                 <img src="http://${location.hostname}${art.thumbnail_url}" alt="作品${art.artwork_id}" class="w-full h-48 object-cover">
+                                 <img src="http://${location.hostname}${art.thumbnail_url}" alt="作品${art.artwork_id}" class="w-full h-48 object-cover bg-gray-200">
                                  <div class="p-3">
                                      <p class="font-bold truncate group-hover:text-green-600">作品 #${art.artwork_id}</p>
                                  </div>
@@ -289,8 +322,107 @@
         }
     }
 
-    // --- (お絵かき関連の関数は、showDrawPageの中で呼び出されるように変更) ---
-    // (initMap, handleStartDrawing, handleStopDrawing の関数定義はここに移動)
+    function initMap() {
+        if (map) map.remove(); 
+        map = L.map('map').setView([34.07, 134.55], 13);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
+        
+        currentUserMarker = L.circleMarker([0,0], { radius: 8, color: 'blue', fillColor: '#3498db', fillOpacity: 0.8 }).addTo(map);
+
+        navigator.geolocation.getCurrentPosition(
+            (pos) => {
+                const latLng = [pos.coords.latitude, pos.coords.longitude];
+                map.setView(latLng, 16);
+                currentUserMarker.setLatLng(latLng);
+            },
+            () => console.warn('現在地を取得できませんでした。'),
+            { enableHighAccuracy: true }
+        );
+
+        polyline = L.polyline([], { color: '#14BE6F', weight: 5 }).addTo(map);
+    }
+
+    async function handleStartDrawing() {
+        try {
+            const data = await apiFetch('/create_artwork.php', { method: 'POST' });
+            currentArtworkId = data.artwork_id;
+            points = [];
+            polyline.setLatLngs([]);
+            document.getElementById('result-area').innerHTML = '';
+            
+            if (!navigator.geolocation) {
+                alert('お使いのブラウザはGPS機能に対応していません。');
+                return;
+            }
+
+            watchId = navigator.geolocation.watchPosition(
+                (position) => {
+                    const lat = position.coords.latitude;
+                    const lng = position.coords.longitude;
+                    const latLng = [lat, lng];
+                    currentUserMarker.setLatLng(latLng);
+                    map.panTo(latLng);
+                    if (isDrawing) {
+                        const newPoint = { latitude: lat, longitude: lng };
+                        points.push(newPoint);
+                        polyline.addLatLng(latLng);
+                    }
+                },
+                (error) => {
+                    console.error("GPS Error:", error.message);
+                    alert("GPSの測位に失敗しました。場所の権限が許可されているか確認してください。");
+                    handleStopDrawing();
+                },
+                { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+            );
+
+            isDrawing = true;
+            document.getElementById('start-button').disabled = true;
+            document.getElementById('stop-button').disabled = false;
+            alert(`お絵かきを開始しました！(作品ID: ${currentArtworkId})`);
+
+        } catch (error) {
+            alert(`エラー: ${error.message}`);
+        }
+    }
+
+    async function handleStopDrawing() {
+        if (watchId) {
+            navigator.geolocation.clearWatch(watchId);
+            watchId = null;
+        }
+        
+        if (!isDrawing) return;
+        isDrawing = false;
+        
+        if (points.length < 2) {
+            alert('軌跡が短すぎます。');
+            document.getElementById('start-button').disabled = false;
+            document.getElementById('stop-button').disabled = true;
+            return;
+        }
+        
+        try {
+            const data = await apiFetch('/finalize_artwork.php', {
+                method: 'POST',
+                body: JSON.stringify({ artwork_id: currentArtworkId, points: points })
+            });
+
+            document.getElementById('start-button').disabled = false;
+            document.getElementById('stop-button').disabled = true;
+            
+            const resultArea = document.getElementById('result-area');
+            const imageUrl = `http://${location.hostname}${data.image_url}`;
+            resultArea.innerHTML = `
+                <h3 class="text-lg font-bold">作品が完成しました！</h3>
+                <img src="${imageUrl}" class="mt-2 border shadow-lg mx-auto" alt="完成した作品">
+                <p class="text-sm text-gray-500 mt-2">画像のURL: <a href="${imageUrl}" target="_blank" class="text-blue-500">${imageUrl}</a></p>
+            `;
+            
+        } catch (error) {
+            alert(`保存エラー: ${error.message}`);
+        }
+    }
 </script>
 </body>
 </html>
