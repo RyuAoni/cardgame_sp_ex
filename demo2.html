@@ -38,8 +38,8 @@
     </div>
 
 <script>
-    // --- ★★★ 設定項目 ★★★ ---
-    const API_BASE_URL = 'http://163.43.104.210/gps_art_app/api'; // あなたのサーバーIPアドレス
+    // --- 設定項目 ---
+    const API_BASE_URL = 'http://163.43.104.210/gps_art_app/api'; // サーバーのIPアドレス
 
     // --- グローバル変数 ---
     let map;
@@ -54,8 +54,6 @@
     // --- イベントリスナー ---
     document.addEventListener('DOMContentLoaded', () => {
         initMap();
-
-        // ボタンのクリックイベント
         document.getElementById('start-button').addEventListener('click', handleStartDrawing);
         document.getElementById('stop-button').addEventListener('click', handleStopDrawing);
     });
@@ -64,11 +62,12 @@
     function showLoading() { loadingOverlay.classList.remove('hidden'); }
     function hideLoading() { loadingOverlay.classList.add('hidden'); }
 
-    // --- API通信 ---
+    // --- API通信 (認証処理なし) ---
     async function apiFetch(endpoint, options = {}) {
         showLoading();
         try {
-            const headers = { 'Content-Type': 'application/json', ...options.headers };
+            // ヘッダーには認証情報を含めず、送信データの形式を指定するだけ
+            const headers = { 'Content-Type': 'application/json' };
              
             const response = await fetch(`${API_BASE_URL}${endpoint}`, {
                 ...options,
@@ -91,19 +90,20 @@
      
     // --- 地図・お絵かき関連 ---
     function initMap() {
-        map = L.map('map').setView([35.681, 139.767], 13); // 初期位置を東京駅に
+        map = L.map('map').setView([35.681, 139.767], 13); // 初期位置: 東京駅
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
             attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
         }).addTo(map);
          
-        // 現在地取得
+        // ユーザーの現在地を取得して地図の中心を移動
         navigator.geolocation.getCurrentPosition(
             (position) => map.setView([position.coords.latitude, position.coords.longitude], 16),
-            () => alert('現在地を取得できませんでした。')
+            () => console.warn('現在地を取得できませんでした。')
         );
 
         polyline = L.polyline([], { color: '#14BE6F', weight: 5 }).addTo(map);
          
+        // マウスの動きでお絵かきする処理 (デモ用)
         map.on('mousemove', (e) => {
             if (isDrawing) {
                 const newPoint = { latitude: e.latlng.lat, longitude: e.latlng.lng };
@@ -113,28 +113,31 @@
         });
     }
 
+    // お絵かき開始ボタンの処理
     async function handleStartDrawing() {
         try {
-            // 認証が不要なため、直接作品作成APIを呼び出す
+            // ユーザー情報なしで新しい作品の作成をリクエスト
             const data = await apiFetch('/create_artwork.php', { method: 'POST' });
             currentArtworkId = data.artwork_id;
             isDrawing = true;
             points = [];
-            polyline.setLatLngs([]);
+            polyline.setLatLngs([]); // 前の線を消去
             document.getElementById('start-button').disabled = true;
             document.getElementById('stop-button').disabled = false;
             document.getElementById('result-area').innerHTML = '';
-            alert(`お絵かきを開始しました！(作品ID: ${currentArtworkId})`);
+            console.log(`お絵かきを開始しました (作品ID: ${currentArtworkId})`);
         } catch (error) {
             alert(`エラー: ${error.message}`);
         }
     }
 
+    // ストップボタンの処理
     async function handleStopDrawing() {
         if (!isDrawing) return;
         isDrawing = false;
          
         try {
+            // 作品IDと軌跡データをサーバーに送信して保存
             const data = await apiFetch('/finalize_artwork.php', {
                 method: 'POST',
                 body: JSON.stringify({ artwork_id: currentArtworkId, points: points })
@@ -143,10 +146,11 @@
             document.getElementById('start-button').disabled = false;
             document.getElementById('stop-button').disabled = true;
              
+            // 結果表示エリアに完成した画像を表示
             const resultArea = document.getElementById('result-area');
             resultArea.innerHTML = `
                 <h3 class="text-lg font-bold">作品が完成しました！</h3>
-                <img src="http://${location.hostname}${data.image_url}" class="mt-2 border shadow-lg mx-auto" alt="完成した作品">
+                <img src="${data.image_url}" class="mt-2 border shadow-lg mx-auto" alt="完成した作品">
             `;
             alert('作品が完成し、保存されました！');
 
