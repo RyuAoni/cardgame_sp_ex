@@ -4,66 +4,60 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>足跡百景 - デモ</title>
-    <!-- Tailwind CSS -->
+    <!-- Tailwind CSS (デザインを整える) -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Leaflet.js (地図ライブラリ) -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <style>
-        body { font-family: sans-serif; }
-        #map { height: calc(100vh - 200px); width: 100%; }
+        body { font-family: 'Hiragino Kaku Gothic ProN', 'Meiryo', sans-serif; }
+        #map { height: calc(100vh - 250px); width: 100%; border-radius: 0.5rem; border: 1px solid #e2e8f0; }
         .hidden { display: none; }
+        /* ローディングスピナー */
+        .loader { border-top-color: #3498db; -webkit-animation: spin 1s linear infinite; animation: spin 1s linear infinite; }
+        @-webkit-keyframes spin { 0% { -webkit-transform: rotate(0deg); } 100% { -webkit-transform: rotate(360deg); } }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
     </style>
 </head>
 <body class="bg-gray-100 text-gray-800">
 
+    <!-- ローディング画面 -->
     <div id="loading-overlay" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-        <div class="text-white text-2xl">処理中...</div>
+        <div class="loader ease-linear rounded-full border-8 border-t-8 border-gray-200 h-32 w-32"></div>
+        <p class="text-white text-2xl absolute">処理中...</p>
     </div>
 
-    <!-- ログイン・登録セクション -->
-    <div id="auth-section" class="container mx-auto p-4 max-w-md">
-        <div class="bg-white p-8 rounded-lg shadow-md">
-            <h1 class="text-2xl font-bold text-center text-green-600 mb-6">足跡百景</h1>
-            
-            <!-- ログインフォーム -->
-            <div id="login-form">
-                <h2 class="text-xl mb-4">ログイン</h2>
-                <input type="email" id="login-email" placeholder="メールアドレス" class="w-full p-2 mb-4 border rounded">
-                <input type="password" id="login-password" placeholder="パスワード" class="w-full p-2 mb-4 border rounded">
-                <button id="login-button" class="w-full bg-green-500 hover:bg-green-600 text-white p-2 rounded">ログイン</button>
-                <p class="text-center mt-4">アカウントがない場合は<a href="#" id="show-register" class="text-blue-500">新規登録</a></p>
-            </div>
-
-            <!-- 新規登録フォーム (最初は非表示) -->
-            <div id="register-form" class="hidden">
-                <h2 class="text-xl mb-4">新規登録</h2>
-                <input type="text" id="register-name" placeholder="ユーザー名" class="w-full p-2 mb-4 border rounded">
-                <input type="email" id="register-email" placeholder="メールアドレス" class="w-full p-2 mb-4 border rounded">
-                <input type="password" id="register-password" placeholder="パスワード" class="w-full p-2 mb-4 border rounded">
-                <button id="register-button" class="w-full bg-blue-500 hover:bg-blue-600 text-white p-2 rounded">登録</button>
-                <p class="text-center mt-4">アカウントをお持ちの場合は<a href="#" id="show-login" class="text-blue-500">ログイン</a></p>
-            </div>
-            <p id="auth-error" class="text-red-500 mt-4 text-center"></p>
+    <!-- ログイン画面 (最初はこれを表示) -->
+    <div id="login-section" class="min-h-screen flex items-center justify-center">
+        <div class="bg-white p-8 rounded-2xl shadow-lg w-full max-w-md">
+            <h1 class="text-3xl font-bold text-center text-green-600 mb-2">足跡百景</h1>
+            <p class="text-center text-gray-500 mb-6">ログインして、お絵かきを始めよう</p>
+            <input type="email" id="login-email" placeholder="メールアドレス" class="w-full p-3 mb-4 border rounded-lg" value="test@example.com">
+            <input type="password" id="login-password" placeholder="パスワード" class="w-full p-3 mb-4 border rounded-lg" value="password">
+            <button id="login-button" class="w-full bg-green-500 hover:bg-green-600 text-white p-3 rounded-lg font-bold">ログイン</button>
+            <p id="login-error" class="text-red-500 mt-4 text-center h-4"></p>
+            <p class="text-center text-sm text-gray-500 mt-4">
+              アカウントがない場合は <a href="/register.html" class="font-semibold text-blue-500 hover:underline">新規登録</a>
+            </p>
         </div>
     </div>
 
-    <!-- 地図・お絵かきセクション (最初は非表示) -->
+    <!-- 地図・お絵かき画面 (最初は非表示) -->
     <div id="map-section" class="hidden">
         <header class="bg-white p-4 shadow-md">
             <div class="container mx-auto flex justify-between items-center">
                 <h1 class="text-xl font-bold text-green-600">足跡百景 - お絵かきモード</h1>
                 <div>
-                    <span id="user-name-display" class="mr-4"></span>
-                    <button id="logout-button" class="bg-gray-200 p-2 rounded">ログアウト</button>
+                    <span id="user-name-display" class="mr-4 text-gray-600"></span>
+                    <button id="logout-button" class="bg-gray-200 hover:bg-gray-300 p-2 rounded text-sm">ログアウト</button>
                 </div>
             </div>
         </header>
         <div class="container mx-auto p-4">
-            <div class="bg-white p-4 rounded-lg shadow-md">
-                <div class="flex justify-center items-center space-x-4 mb-4">
-                    <button id="start-button" class="bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded">お絵かきスタート</button>
-                    <button id="stop-button" class="bg-red-500 hover:bg-red-600 text-white font-bold py-2 px-4 rounded" disabled>ストップ</button>
+            <div class="bg-white p-6 rounded-lg shadow-md">
+                <div class="flex flex-col sm:flex-row justify-center items-center gap-4 mb-4">
+                    <button id="start-button" class="w-full sm:w-auto bg-green-500 hover:bg-green-600 text-white font-bold py-3 px-6 rounded-lg transition-transform transform hover:scale-105">お絵かきスタート</button>
+                    <button id="stop-button" class="w-full sm:w-auto bg-red-500 hover:bg-red-600 text-white font-bold py-3 px-6 rounded-lg transition-transform transform hover:scale-105" disabled>ストップ＆画像生成</button>
                 </div>
                 <div id="map"></div>
                 <div id="result-area" class="mt-4 text-center"></div>
@@ -73,36 +67,19 @@
 
 <script>
     // --- ★★★ 設定項目 ★★★ ---
-    const API_BASE_URL = 'http://163.43.104.210/gps_art_app/api'; // あなたのサーバーIPアドレスに書き換えてください
+    const API_BASE_URL = 'http://163.43.104.210/gps_art_app/api';
 
     // --- グローバル変数 ---
-    let map;
-    let polyline;
-    let token = null;
-    let isDrawing = false;
-    let currentArtworkId = null;
+    let map, polyline, token = null, isDrawing = false, currentArtworkId = null;
     let points = [];
 
-    // --- DOM要素の取得 ---
-    const authSection = document.getElementById('auth-section');
+    // --- DOM要素 ---
+    const loginSection = document.getElementById('login-section');
     const mapSection = document.getElementById('map-section');
-    const loginForm = document.getElementById('login-form');
-    const registerForm = document.getElementById('register-form');
-    const showRegisterLink = document.getElementById('show-register');
-    const showLoginLink = document.getElementById('show-login');
-    const authError = document.getElementById('auth-error');
     const loadingOverlay = document.getElementById('loading-overlay');
-
+    
     // --- イベントリスナー ---
     document.addEventListener('DOMContentLoaded', () => {
-        initMap();
-
-        // フォーム切り替え
-        showRegisterLink.addEventListener('click', (e) => { e.preventDefault(); toggleForms(); });
-        showLoginLink.addEventListener('click', (e) => { e.preventDefault(); toggleForms(); });
-
-        // ボタンのクリックイベント
-        document.getElementById('register-button').addEventListener('click', handleRegister);
         document.getElementById('login-button').addEventListener('click', handleLogin);
         document.getElementById('logout-button').addEventListener('click', handleLogout);
         document.getElementById('start-button').addEventListener('click', handleStartDrawing);
@@ -110,14 +87,8 @@
     });
     
     // --- UI制御 ---
-    function toggleForms() {
-        loginForm.classList.toggle('hidden');
-        registerForm.classList.toggle('hidden');
-        authError.textContent = '';
-    }
-
-    function showLoading() { loadingOverlay.classList.remove('hidden'); }
-    function hideLoading() { loadingOverlay.classList.add('hidden'); }
+    const showLoading = () => loadingOverlay.classList.remove('hidden');
+    const hideLoading = () => loadingOverlay.classList.add('hidden');
 
     // --- API通信 ---
     async function apiFetch(endpoint, options = {}) {
@@ -127,18 +98,10 @@
             if (token) {
                 headers['Authorization'] = `Bearer ${token}`;
             }
-            
-            const response = await fetch(`${API_BASE_URL}${endpoint}`, {
-                ...options,
-                headers: headers
-            });
-
-            const data = await response.json();
-
-            if (!response.ok) {
-                throw new Error(data.error || '不明なエラーが発生しました。');
-            }
-            return data;
+            const response = await fetch(`${API_BASE_URL}${endpoint}`, { ...options, headers });
+            const result = await response.json();
+            if (!response.ok) throw new Error(result.error || '不明なエラー');
+            return result;
         } catch (error) {
             console.error('API Error:', error);
             throw error;
@@ -147,62 +110,43 @@
         }
     }
 
-    // --- 認証関連のハンドラ ---
-    async function handleRegister() {
-        const name = document.getElementById('register-name').value;
-        const email = document.getElementById('register-email').value;
-        const password = document.getElementById('register-password').value;
-        authError.textContent = '';
-
-        try {
-            const data = await apiFetch('/register.php', {
-                method: 'POST',
-                body: JSON.stringify({ user_name: name, email: email, password: password })
-            });
-            alert('登録が完了しました！ログインしてください。');
-            toggleForms();
-        } catch (error) {
-            authError.textContent = error.message;
-        }
-    }
-    
+    // --- 認証ハンドラ ---
     async function handleLogin() {
         const email = document.getElementById('login-email').value;
         const password = document.getElementById('login-password').value;
-        authError.textContent = '';
+        const errorEl = document.getElementById('login-error');
+        errorEl.textContent = '';
 
         try {
             const data = await apiFetch('/login.php', {
                 method: 'POST',
-                body: JSON.stringify({ email: email, password: password })
+                body: JSON.stringify({ email, password })
             });
             token = data.token;
-            authSection.classList.add('hidden');
+            loginSection.classList.add('hidden');
             mapSection.classList.remove('hidden');
             document.getElementById('user-name-display').textContent = `ようこそ、${data.user.user_name}さん`;
+            initMap();
         } catch (error) {
-            authError.textContent = error.message;
+            errorEl.textContent = error.message;
         }
     }
 
     function handleLogout() {
         token = null;
-        authSection.classList.remove('hidden');
+        loginSection.classList.remove('hidden');
         mapSection.classList.add('hidden');
-        authError.textContent = '';
     }
     
-    // --- 地図・お絵かき関連 ---
+    // --- 地図・お絵かき ---
     function initMap() {
-        map = L.map('map').setView([35.681, 139.767], 13); // 初期位置を東京駅に
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-        }).addTo(map);
+        if (map) map.remove(); // 既存のマップを削除
+        map = L.map('map').setView([34.07, 134.55], 13); // 初期位置を徳島に
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
         
-        // 現在地取得
         navigator.geolocation.getCurrentPosition(
-            (position) => map.setView([position.coords.latitude, position.coords.longitude], 16),
-            () => alert('現在地を取得できませんでした。')
+            (pos) => map.setView([pos.coords.latitude, pos.coords.longitude], 16),
+            () => console.warn('現在地を取得できませんでした。')
         );
 
         polyline = L.polyline([], { color: '#14BE6F', weight: 5 }).addTo(map);
@@ -226,7 +170,7 @@
             document.getElementById('start-button').disabled = true;
             document.getElementById('stop-button').disabled = false;
             document.getElementById('result-area').innerHTML = '';
-            alert(`お絵かきを開始しました！(作品ID: ${currentArtworkId})`);
+            alert(`お絵かきを開始しました！(作品ID: ${currentArtworkId}) 地図上をマウスでなぞって軌跡を描いてください。`);
         } catch (error) {
             alert(`エラー: ${error.message}`);
         }
@@ -235,6 +179,13 @@
     async function handleStopDrawing() {
         if (!isDrawing) return;
         isDrawing = false;
+        
+        if (points.length < 2) {
+            alert('軌跡が短すぎます。');
+            document.getElementById('start-button').disabled = false;
+            document.getElementById('stop-button').disabled = true;
+            return;
+        }
         
         try {
             const data = await apiFetch('/finalize_artwork.php', {
@@ -246,12 +197,13 @@
             document.getElementById('stop-button').disabled = true;
             
             const resultArea = document.getElementById('result-area');
+            const imageUrl = `http://${location.hostname}${data.image_url}`;
             resultArea.innerHTML = `
                 <h3 class="text-lg font-bold">作品が完成しました！</h3>
-                <img src="http://${location.hostname}${data.image_url}" class="mt-2 border shadow-lg mx-auto" alt="完成した作品">
+                <img src="${imageUrl}" class="mt-2 border shadow-lg mx-auto" alt="完成した作品">
+                <p class="text-sm text-gray-500 mt-2">画像のURL: <a href="${imageUrl}" target="_blank" class="text-blue-500">${imageUrl}</a></p>
             `;
-            alert('作品が完成し、保存されました！');
-
+            
         } catch (error) {
             alert(`保存エラー: ${error.message}`);
         }
@@ -260,3 +212,4 @@
 </script>
 </body>
 </html>
+
