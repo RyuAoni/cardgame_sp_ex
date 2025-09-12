@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>新規会員登録 - 足跡百景</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* ちょっとしたカスタムスタイル */
+        body {
+            font-family: 'Hiragino Kaku Gothic ProN', 'Meiryo', sans-serif;
+        }
+        .form-container {
+            max-width: 450px;
+        }
+    </style>
+</head>
+<body class="bg-gray-50 flex items-center justify-center min-h-screen">
+
+    <div class="w-full form-container">
+        <div class="bg-white p-8 md:p-10 rounded-2xl shadow-lg">
+            
+            <!-- ロゴとタイトル -->
+            <div class="text-center mb-8">
+                <h1 class="text-3xl font-bold text-gray-800">足跡百景</h1>
+                <p class="text-gray-500 mt-2">新しいアカウントを作成</p>
+            </div>
+
+            <!-- 登録フォーム -->
+            <form id="register-form">
+                <!-- アイコン選択とプレビュー -->
+                <div class="mb-6 text-center">
+                    <label for="icon-input" class="cursor-pointer">
+                        <img id="icon-preview" src="https://placehold.co/128x128/E2E8F0/A0AEC0?text=Icon" alt="アイコンプレビュー" class="w-32 h-32 rounded-full mx-auto object-cover border-4 border-gray-200 hover:border-green-400 transition-colors">
+                        <span class="text-sm text-gray-500 mt-2 block">アイコンを選択</span>
+                    </label>
+                    <input type="file" id="icon-input" accept="image/*" class="hidden">
+                </div>
+
+                <!-- 各入力フィールド -->
+                <div class="mb-4">
+                    <label for="user_name" class="block text-sm font-medium text-gray-700 mb-1">ユーザー名</label>
+                    <input type="text" id="user_name" name="user_name" required class="w-full p-3 border border-gray-300 rounded-lg focus:ring-green-500 focus:border-green-500">
+                </div>
+                <div class="mb-4">
+                    <label for="email" class="block text-sm font-medium text-gray-700 mb-1">メールアドレス</label>
+                    <input type="email" id="email" name="email" required class="w-full p-3 border border-gray-300 rounded-lg focus:ring-green-500 focus:border-green-500">
+                </div>
+                <div class="mb-4">
+                    <label for="password" class="block text-sm font-medium text-gray-700 mb-1">パスワード</label>
+                    <input type="password" id="password" name="password" required class="w-full p-3 border border-gray-300 rounded-lg focus:ring-green-500 focus:border-green-500">
+                </div>
+                <div class="mb-6">
+                    <label for="bio" class="block text-sm font-medium text-gray-700 mb-1">自己紹介（任意）</label>
+                    <textarea id="bio" name="bio" rows="3" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-green-500 focus:border-green-500"></textarea>
+                </div>
+
+                <!-- メッセージ表示エリア -->
+                <div id="message-area" class="mb-4 text-center"></div>
+
+                <!-- 登録ボタン -->
+                <button type="submit" id="submit-button" class="w-full bg-green-500 hover:bg-green-600 text-white font-bold py-3 px-4 rounded-lg transition-transform transform hover:scale-105">
+                    登録する
+                </button>
+            </form>
+            
+        </div>
+    </div>
+
+<script>
+    // --- ★★★ 設定項目 ★★★ ---
+    const API_REGISTER_URL = 'http://163.43.104.210/gps_art_app/api/register.php';
+
+    // --- DOM要素の取得 ---
+    const registerForm = document.getElementById('register-form');
+    const submitButton = document.getElementById('submit-button');
+    const messageArea = document.getElementById('message-area');
+    const iconInput = document.getElementById('icon-input');
+    const iconPreview = document.getElementById('icon-preview');
+
+    // --- アイコン画像のプレビュー機能 ---
+    iconInput.addEventListener('change', (event) => {
+        const file = event.target.files[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                iconPreview.src = e.target.result;
+            };
+            reader.readAsDataURL(file);
+        }
+    });
+
+    // --- フォーム送信処理 ---
+    registerForm.addEventListener('submit', async (event) => {
+        event.preventDefault(); // デフォルトのフォーム送信をキャンセル
+
+        // 1. ボタンを無効化し、メッセージをクリア
+        submitButton.disabled = true;
+        submitButton.textContent = '登録中...';
+        messageArea.innerHTML = '';
+
+        // 2. FormDataオブジェクトを作成し、フォームのデータを追加
+        // ファイルをアップロードするには、JSONではなくFormDataを使うのが一般的です
+        const formData = new FormData();
+        formData.append('user_name', document.getElementById('user_name').value);
+        formData.append('email', document.getElementById('email').value);
+        formData.append('password', document.getElementById('password').value);
+        formData.append('bio', document.getElementById('bio').value);
+        
+        // アイコンが選択されていれば追加
+        if (iconInput.files[0]) {
+            formData.append('icon_image', iconInput.files[0]);
+        }
+
+        // 3. fetch APIを使ってバックエンドにデータを送信
+        try {
+            const response = await fetch(API_REGISTER_URL, {
+                method: 'POST',
+                body: formData // JSON.stringifyではなく、formDataを直接渡す
+            });
+
+            const result = await response.json();
+
+            if (!response.ok) {
+                // APIがエラーを返した場合
+                throw new Error(result.error || '不明なエラーが発生しました。');
+            }
+
+            // 4. 成功した場合の処理
+            messageArea.innerHTML = `<p class="text-green-600 font-bold">${result.message}</p>`;
+            // 成功したらフォームを非表示にしても良い
+            registerForm.reset();
+            iconPreview.src = 'https://placehold.co/128x128/E2E8F0/A0AEC0?text=Icon';
+            alert('登録が完了しました！ログインページに移動します。');
+            // TODO: 実際のログインページにリダイレクトする
+            // window.location.href = '/login.html';
+
+        } catch (error) {
+            // 5. 失敗した場合の処理
+            messageArea.innerHTML = `<p class="text-red-600 font-bold">${error.message}</p>`;
+        } finally {
+            // 6. ボタンを再度有効化
+            submitButton.disabled = false;
+            submitButton.textContent = '登録する';
+        }
+    });
+</script>
+
+</body>
+</html>
