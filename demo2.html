@@ -3,10 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>足跡百景 - デモ</title>
-    <!-- Tailwind CSS -->
+    <title>足跡百景 - お絵かきモード</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Leaflet.js (地図ライブラリ) -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <style>
@@ -21,15 +19,10 @@
         <div class="text-white text-2xl">処理中...</div>
     </div>
 
-    <!-- 地図・お絵かきセクション (最初は非表示) -->
-    <div id="map-section" class="hidden">
+    <div id="map-section">
         <header class="bg-white p-4 shadow-md">
-            <div class="container mx-auto flex justify-between items-center">
+            <div class="container mx-auto flex justify-center items-center">
                 <h1 class="text-xl font-bold text-green-600">足跡百景 - お絵かきモード</h1>
-                <div>
-                    <span id="user-name-display" class="mr-4"></span>
-                    <button id="logout-button" class="bg-gray-200 p-2 rounded">ログアウト</button>
-                </div>
             </div>
         </header>
         <div class="container mx-auto p-4">
@@ -46,49 +39,28 @@
 
 <script>
     // --- ★★★ 設定項目 ★★★ ---
-    const API_BASE_URL = 'http://163.43.104.210/gps_art_app/api'; // あなたのサーバーIPアドレスに書き換えてください
+    const API_BASE_URL = 'http://163.43.104.210/gps_art_app/api'; // あなたのサーバーIPアドレス
 
     // --- グローバル変数 ---
     let map;
     let polyline;
-    let token = null;
     let isDrawing = false;
     let currentArtworkId = null;
     let points = [];
 
     // --- DOM要素の取得 ---
-    const authSection = document.getElementById('auth-section');
-    const mapSection = document.getElementById('map-section');
-    const loginForm = document.getElementById('login-form');
-    const registerForm = document.getElementById('register-form');
-    const showRegisterLink = document.getElementById('show-register');
-    const showLoginLink = document.getElementById('show-login');
-    const authError = document.getElementById('auth-error');
     const loadingOverlay = document.getElementById('loading-overlay');
 
     // --- イベントリスナー ---
     document.addEventListener('DOMContentLoaded', () => {
         initMap();
 
-        // フォーム切り替え
-        showRegisterLink.addEventListener('click', (e) => { e.preventDefault(); toggleForms(); });
-        showLoginLink.addEventListener('click', (e) => { e.preventDefault(); toggleForms(); });
-
         // ボタンのクリックイベント
-        document.getElementById('register-button').addEventListener('click', handleRegister);
-        document.getElementById('login-button').addEventListener('click', handleLogin);
-        document.getElementById('logout-button').addEventListener('click', handleLogout);
         document.getElementById('start-button').addEventListener('click', handleStartDrawing);
         document.getElementById('stop-button').addEventListener('click', handleStopDrawing);
     });
-    
+     
     // --- UI制御 ---
-    function toggleForms() {
-        loginForm.classList.toggle('hidden');
-        registerForm.classList.toggle('hidden');
-        authError.textContent = '';
-    }
-
     function showLoading() { loadingOverlay.classList.remove('hidden'); }
     function hideLoading() { loadingOverlay.classList.add('hidden'); }
 
@@ -97,10 +69,7 @@
         showLoading();
         try {
             const headers = { 'Content-Type': 'application/json', ...options.headers };
-            if (token) {
-                headers['Authorization'] = `Bearer ${token}`;
-            }
-            
+             
             const response = await fetch(`${API_BASE_URL}${endpoint}`, {
                 ...options,
                 headers: headers
@@ -119,59 +88,14 @@
             hideLoading();
         }
     }
-
-    // --- 認証関連のハンドラ ---
-    async function handleRegister() {
-        const name = document.getElementById('register-name').value;
-        const email = document.getElementById('register-email').value;
-        const password = document.getElementById('register-password').value;
-        authError.textContent = '';
-
-        try {
-            const data = await apiFetch('/register.php', {
-                method: 'POST',
-                body: JSON.stringify({ user_name: name, email: email, password: password })
-            });
-            alert('登録が完了しました！ログインしてください。');
-            toggleForms();
-        } catch (error) {
-            authError.textContent = error.message;
-        }
-    }
-    
-    async function handleLogin() {
-        const email = document.getElementById('login-email').value;
-        const password = document.getElementById('login-password').value;
-        authError.textContent = '';
-
-        try {
-            const data = await apiFetch('/login.php', {
-                method: 'POST',
-                body: JSON.stringify({ email: email, password: password })
-            });
-            token = data.token;
-            authSection.classList.add('hidden');
-            mapSection.classList.remove('hidden');
-            document.getElementById('user-name-display').textContent = `ようこそ、${data.user.user_name}さん`;
-        } catch (error) {
-            authError.textContent = error.message;
-        }
-    }
-
-    function handleLogout() {
-        token = null;
-        authSection.classList.remove('hidden');
-        mapSection.classList.add('hidden');
-        authError.textContent = '';
-    }
-    
+     
     // --- 地図・お絵かき関連 ---
     function initMap() {
         map = L.map('map').setView([35.681, 139.767], 13); // 初期位置を東京駅に
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
             attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
         }).addTo(map);
-        
+         
         // 現在地取得
         navigator.geolocation.getCurrentPosition(
             (position) => map.setView([position.coords.latitude, position.coords.longitude], 16),
@@ -179,7 +103,7 @@
         );
 
         polyline = L.polyline([], { color: '#14BE6F', weight: 5 }).addTo(map);
-        
+         
         map.on('mousemove', (e) => {
             if (isDrawing) {
                 const newPoint = { latitude: e.latlng.lat, longitude: e.latlng.lng };
@@ -191,6 +115,7 @@
 
     async function handleStartDrawing() {
         try {
+            // 認証が不要なため、直接作品作成APIを呼び出す
             const data = await apiFetch('/create_artwork.php', { method: 'POST' });
             currentArtworkId = data.artwork_id;
             isDrawing = true;
@@ -208,7 +133,7 @@
     async function handleStopDrawing() {
         if (!isDrawing) return;
         isDrawing = false;
-        
+         
         try {
             const data = await apiFetch('/finalize_artwork.php', {
                 method: 'POST',
@@ -217,7 +142,7 @@
 
             document.getElementById('start-button').disabled = false;
             document.getElementById('stop-button').disabled = true;
-            
+             
             const resultArea = document.getElementById('result-area');
             resultArea.innerHTML = `
                 <h3 class="text-lg font-bold">作品が完成しました！</h3>
