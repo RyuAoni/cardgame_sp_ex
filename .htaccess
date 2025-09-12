@@ -1,0 +1,17 @@
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+
+  # APIリクエストを各PHPファイルに振り分ける
+  RewriteRule ^api/artworks$ /gps_art_app/api/get_public_artworks.php [L]
+  RewriteRule ^api/artworks/(\d+)$ /gps_art_app/api/get_artwork.php?artwork_id=$1 [L]
+  RewriteRule ^api/me$ /gps_art_app/api/get_my_page.php [L]
+  RewriteRule ^api/me/artworks/(\d+)$ /gps_art_app/api/get_my_artwork_detail.php?artwork_id=$1 [L]
+  RewriteRule ^api/templates$ /gps_art_app/api/get_templates.php [L]
+  RewriteRule ^api/templates/(\d+)$ /gps_art_app/api/get_template_detail.php?template_id=$1 [L]
+
+    RewriteCond %{REQUEST_METHOD} POST
+    RewriteRule ^api/artworks$ /gps_art_app/api/finalize_artwork.php [L]
+  # POSTリクエスト用のファイルはそのまま
+  # (login.php, register.php, finalize_artwork.php など)
+</IfModule>
+
