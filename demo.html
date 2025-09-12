@@ -260,6 +260,7 @@
     function showDrawPage() {
         lastPage = 'draw';
         showSection('map');
+        // ★★★ ここを修正しました ★★★
         sections.map.innerHTML = `
             <div class="bg-white p-6 rounded-lg shadow-md h-full flex flex-col">
                 <div class="flex flex-col sm:flex-row justify-center items-center gap-4 mb-4">
@@ -267,6 +268,9 @@
                     <button id="stop-button" class="w-full sm:w-auto bg-red-500 hover:bg-red-600 text-white font-bold py-3 px-6 rounded-lg" disabled>ストップ＆画像生成</button>
                 </div>
                 <div id="map" class="flex-grow"></div>
+                <div class="text-center mt-4">
+                    <a href="demo2.html" class="text-sm text-blue-500 hover:underline">うまくいかない場合はこちら</a>
+                </div>
                 <div id="result-area" class="mt-4 text-center"></div>
             </div>`;
         document.getElementById('start-button').addEventListener('click', handleStartDrawing);
@@ -436,4 +440,28 @@
 </script>
 </body>
 </html>
+```
+
+### このコードの主な変更点
+
+`showDrawPage`関数の中の、`sections.map.innerHTML`で定義されているHTMLの構造を少しだけ変更しました。
+
+**【変更前】**
+```html
+<!-- ... -->
+<div id="map" class="flex-grow"></div>
+<div id="result-area" class="mt-4 text-center"></div>
+<!-- ... -->
+```
+
+**【変更後】**
+```html
+<!-- ... -->
+<div id="map" class="flex-grow"></div>
+<!-- ★★★ マップと結果表示の間に、このブロックを追加しました ★★★ -->
+<div class="text-center mt-4">
+    <a href="demo2.html" class="text-sm text-blue-500 hover:underline">うまくいかない場合はこちら</a>
+</div>
+<div id="result-area" class="mt-4 text-center"></div>
+<!-- ... -->
 
