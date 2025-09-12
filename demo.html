@@ -11,7 +11,8 @@
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <style>
         body { font-family: 'Hiragino Kaku Gothic ProN', 'Meiryo', sans-serif; }
-        #map { height: calc(100vh - 250px); width: 100%; border-radius: 0.5rem; border: 1px solid #e2e8f0; }
+        /* ヘッダーとフッターの高さを考慮して、地図の高さを調整 */
+        #map { height: calc(100vh - 320px); width: 100%; border-radius: 0.5rem; border: 1px solid #e2e8f0; }
         .hidden { display: none; }
         /* ローディングスピナー */
         .loader { border-top-color: #3498db; -webkit-animation: spin 1s linear infinite; animation: spin 1s linear infinite; }
@@ -27,7 +28,7 @@
         <p class="text-white text-2xl absolute">処理中...</p>
     </div>
 
-    <!-- ログイン画面 (最初はこれを表示) -->
+    <!-- ログイン画面 (変更なし) -->
     <div id="login-section" class="min-h-screen flex items-center justify-center p-4">
         <div class="bg-white p-8 rounded-2xl shadow-lg w-full max-w-md">
             <h1 class="text-3xl font-bold text-center text-green-600 mb-2">足跡百景</h1>
@@ -42,45 +43,55 @@
         </div>
     </div>
 
-    <!-- 地図・お絵かき画面 (最初は非表示) -->
-    <div id="map-section" class="hidden">
-        <header class="bg-white p-4 shadow-md">
+    <!-- 地図・お絵かき画面 (ヘッダーとフッターを追加) -->
+    <div id="map-section" class="hidden flex flex-col min-h-screen">
+        <!-- ★★★ ここからヘッダー ★★★ -->
+        <header class="bg-[#14BE6F] text-white p-4 shadow-md">
             <div class="container mx-auto flex justify-between items-center">
-                <h1 class="text-xl font-bold text-green-600">足跡百景 - お絵かきモード</h1>
+                <h1 class="text-xl font-bold">足跡百景</h1>
                 <div>
-                    <span id="user-name-display" class="mr-4 text-gray-600"></span>
-                    <button id="logout-button" class="bg-gray-200 hover:bg-gray-300 p-2 rounded text-sm">ログアウト</button>
+                    <span id="user-name-display" class="mr-4 text-sm font-semibold"></span>
+                    <button id="logout-button" class="bg-white/20 hover:bg-white/30 p-2 rounded text-sm font-semibold">ログアウト</button>
                 </div>
             </div>
         </header>
-        <div class="container mx-auto p-4">
-            <div class="bg-white p-6 rounded-lg shadow-md">
+        <!-- ★★★ ヘッダーここまで ★★★ -->
+
+        <main class="container mx-auto p-4 flex-grow">
+            <div class="bg-white p-6 rounded-lg shadow-md h-full flex flex-col">
                 <div class="flex flex-col sm:flex-row justify-center items-center gap-4 mb-4">
                     <button id="start-button" class="w-full sm:w-auto bg-green-500 hover:bg-green-600 text-white font-bold py-3 px-6 rounded-lg transition-transform transform hover:scale-105">お絵かきスタート</button>
                     <button id="stop-button" class="w-full sm:w-auto bg-red-500 hover:bg-red-600 text-white font-bold py-3 px-6 rounded-lg transition-transform transform hover:scale-105" disabled>ストップ＆画像生成</button>
                 </div>
-                <div id="map"></div>
+                <div id="map" class="flex-grow"></div>
                 <div id="result-area" class="mt-4 text-center"></div>
             </div>
-        </div>
+        </main>
+
+        <!-- ★★★ ここからフッター ★★★ -->
+        <footer class="bg-gray-800 text-white p-4 shadow-inner">
+            <div class="container mx-auto flex justify-center items-center gap-6 text-sm">
+                <a href="#" class="hover:text-green-400 font-semibold">足跡百景</a>
+                <a href="#" class="hover:text-green-400">書く</a>
+                <a href="#" class="hover:text-green-400">なぞり型</a>
+                <a href="#" class="hover:text-green-400">マイページ</a>
+            </div>
+        </footer>
+        <!-- ★★★ フッターここまで ★★★ -->
     </div>
 
 <script>
-    // --- ★★★ 設定項目 ★★★ ---
+    // --- (JavaScript部分は変更ありません) ---
     const API_BASE_URL = 'http://163.43.104.210/gps_art_app/api';
-
-    // --- グローバル変数 ---
     let map, polyline, token = null, isDrawing = false, currentArtworkId = null;
     let points = [];
-    let watchId = null; // GPS追跡を管理するためのID
-    let currentUserMarker = null; // 現在地を示すマーカー
+    let watchId = null;
+    let currentUserMarker = null;
 
-    // --- DOM要素 ---
     const loginSection = document.getElementById('login-section');
     const mapSection = document.getElementById('map-section');
     const loadingOverlay = document.getElementById('loading-overlay');
     
-    // --- イベントリスナー ---
     document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('login-button').addEventListener('click', handleLogin);
         document.getElementById('logout-button').addEventListener('click', handleLogout);
@@ -88,11 +99,9 @@
         document.getElementById('stop-button').addEventListener('click', handleStopDrawing);
     });
     
-    // --- UI制御 ---
     const showLoading = () => loadingOverlay.classList.remove('hidden');
     const hideLoading = () => loadingOverlay.classList.add('hidden');
 
-    // --- API通信 ---
     async function apiFetch(endpoint, options = {}) {
         showLoading();
         try {
@@ -112,7 +121,6 @@
         }
     }
 
-    // --- 認証ハンドラ ---
     async function handleLogin() {
         const email = document.getElementById('login-email').value;
         const password = document.getElementById('login-password').value;
@@ -138,22 +146,26 @@
         token = null;
         loginSection.classList.remove('hidden');
         mapSection.classList.add('hidden');
+        if (watchId) {
+            navigator.geolocation.clearWatch(watchId);
+            watchId = null;
+        }
     }
     
-    // --- 地図・お絵かき ---
     function initMap() {
-        if (map) map.remove(); 
-        map = L.map('map').setView([34.07, 134.55], 13); // 初期位置を徳島に
+        if (map) {
+             map.remove();
+        }
+        map = L.map('map').setView([34.07, 134.55], 13);
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
         
-        // ★★★ 現在地を示すためのマーカーを追加 ★★★
         currentUserMarker = L.circleMarker([0,0], { radius: 8, color: 'blue', fillColor: '#3498db', fillOpacity: 0.8 }).addTo(map);
 
         navigator.geolocation.getCurrentPosition(
             (pos) => {
                 const latLng = [pos.coords.latitude, pos.coords.longitude];
                 map.setView(latLng, 16);
-                currentUserMarker.setLatLng(latLng); // マーカーを現在地に移動
+                currentUserMarker.setLatLng(latLng);
             },
             () => console.warn('現在地を取得できませんでした。'),
             { enableHighAccuracy: true }
@@ -170,42 +182,30 @@
             polyline.setLatLngs([]);
             document.getElementById('result-area').innerHTML = '';
             
-            // ★★★ GPS追跡を開始 ★★★
             if (!navigator.geolocation) {
                 alert('お使いのブラウザはGPS機能に対応していません。');
                 return;
             }
 
             watchId = navigator.geolocation.watchPosition(
-                // 成功時のコールバック
                 (position) => {
                     const lat = position.coords.latitude;
                     const lng = position.coords.longitude;
                     const latLng = [lat, lng];
-
-                    // 現在地マーカーを更新
                     currentUserMarker.setLatLng(latLng);
-                    map.panTo(latLng); // 地図を現在地に滑らかに移動
-
-                    // お絵かき中であれば、点を記録して線を描画
+                    map.panTo(latLng);
                     if (isDrawing) {
                         const newPoint = { latitude: lat, longitude: lng };
                         points.push(newPoint);
                         polyline.addLatLng(latLng);
                     }
                 },
-                // エラー時のコールバック
                 (error) => {
                     console.error("GPS Error:", error.message);
                     alert("GPSの測位に失敗しました。場所の権限が許可されているか確認してください。");
-                    handleStopDrawing(); // エラー時は描画を停止
+                    handleStopDrawing();
                 },
-                // オプション
-                {
-                    enableHighAccuracy: true, // 高精度モードを有効に
-                    timeout: 10000,           // 10秒でタイムアウト
-                    maximumAge: 0             // 古い位置情報を利用しない
-                }
+                { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
             );
 
             isDrawing = true;
@@ -219,7 +219,6 @@
     }
 
     async function handleStopDrawing() {
-        // ★★★ GPS追跡を停止 ★★★
         if (watchId) {
             navigator.geolocation.clearWatch(watchId);
             watchId = null;
@@ -245,7 +244,6 @@
             document.getElementById('stop-button').disabled = true;
             
             const resultArea = document.getElementById('result-area');
-            // ★★★ 画像URLを正しく組み立てる ★★★
             const imageUrl = `http://${location.hostname}${data.image_url}`;
             resultArea.innerHTML = `
                 <h3 class="text-lg font-bold">作品が完成しました！</h3>
@@ -257,7 +255,6 @@
             alert(`保存エラー: ${error.message}`);
         }
     }
-
 </script>
 </body>
 </html>
