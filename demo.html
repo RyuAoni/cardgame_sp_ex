@@ -75,21 +75,25 @@
     let watchId = null;
     let currentUserMarker = null;
     let lastPage = 'gallery';
-
-    // --- DOM要素 ---
-    const loginSection = document.getElementById('login-section');
-    const appContainer = document.getElementById('app-container');
-    const loadingOverlay = document.getElementById('loading-overlay');
-    const sections = {
-        gallery: document.getElementById('gallery-section'),
-        artworkDetail: document.getElementById('artwork-detail-section'),
-        map: document.getElementById('map-section'),
-        template: document.getElementById('template-section'),
-        myPage: document.getElementById('my-page-section'),
-    };
     
+    // ★★★ 修正点: DOM要素の変数をここで宣言だけしておく ★★★
+    let loginSection, appContainer, loadingOverlay, sections;
+
     // --- イベントリスナー ---
     document.addEventListener('DOMContentLoaded', () => {
+        // ★★★ 修正点: DOMが読み込まれた後に要素を取得する ★★★
+        loginSection = document.getElementById('login-section');
+        appContainer = document.getElementById('app-container');
+        loadingOverlay = document.getElementById('loading-overlay');
+        sections = {
+            gallery: document.getElementById('gallery-section'),
+            artworkDetail: document.getElementById('artwork-detail-section'),
+            map: document.getElementById('map-section'),
+            template: document.getElementById('template-section'),
+            myPage: document.getElementById('my-page-section'),
+        };
+        
+        // --- ここから下の初期化処理は変更なし ---
         loginSection.innerHTML = `
             <div class="bg-white p-8 rounded-2xl shadow-lg w-full max-w-md">
                 <h1 class="text-3xl font-bold text-center text-green-600 mb-2">足跡百景</h1>
@@ -187,7 +191,13 @@
         showSection('gallery');
         sections.gallery.innerHTML = `<div class="text-center p-8">読み込み中...</div>`;
         try {
-            const artworks = await apiFetch('/get_public_artworks.php');
+            const responseData = await apiFetch('/get_public_artworks.php');
+            const artworks = Array.isArray(responseData) ? responseData : responseData.artwork_info;
+
+            if (!Array.isArray(artworks)) {
+                throw new Error('サーバーから予期しない形式のデータが返されました。');
+            }
+
             let galleryHtml = '<div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">';
             if (artworks.length === 0) {
                  galleryHtml = '<div class="text-center p-8 text-gray-500">まだ公開された作品がありません。</div>';
