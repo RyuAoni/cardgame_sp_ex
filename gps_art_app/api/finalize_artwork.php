@@ -51,12 +51,10 @@ try {
     list($center_tile_x, $center_tile_y) = latLonToTile($center_lat, $center_lng, $zoom);
     list($center_pixel_x, $center_pixel_y) = latLonToPixel($center_lat, $center_lng, $zoom);
     
-    // --- ★★★ ここからが変更・追加部分 ★★★ ---
-    
     // 5. 背景地図を作成
     $map_image = imagecreatetruecolor($image_width, $image_height);
     $bg_color = imagecolorallocate($map_image, 229, 227, 223); // 明るいグレーの背景色
-    imagefill($map_image, 0, 0, $bg_color); // 背景を塗りつぶす
+    imagefill($map_image, 0, 0, $bg_color);
 
     $tiles_x = ceil($image_width / 256) + 1;
     $tiles_y = ceil($image_height / 256) + 1;
@@ -70,10 +68,8 @@ try {
             $opts = ['http' => ['header' => "User-Agent: GpsArtApp/1.0\r\n", 'timeout' => 10]];
             $context = stream_context_create($opts);
 
-            // 以前のエラー抑制(@)を外し、失敗したら明確なエラーを投げるように変更
             $tile_data = file_get_contents($tile_url, false, $context);
             if ($tile_data === false) {
-                // タイル取得に失敗した場合、ログに残して処理を続ける
                 error_log("タイル取得失敗: " . $tile_url);
                 continue;
             }
@@ -108,18 +104,20 @@ try {
     $save_dir = __DIR__ . '/../images/artworks/';
     if (!is_dir($save_dir)) {
         if (!mkdir($save_dir, 0755, true)) {
-             throw new Exception("画像の保存ディレクトリ作成に失敗しました。パーミッションを確認してください。");
+             throw new Exception("画像の保存ディレクトリ作成に失敗しました。サーバーのパーミッションを確認してください。");
         }
     }
     $image_save_path = $save_dir . $image_file_name;
     
-    // imagepngの成功/失敗をチェック
     if (!imagepng($map_image, $image_save_path)) {
         throw new Exception("画像のファイル保存に失敗しました。{$image_save_path} への書き込み権限を確認してください。");
     }
 
     // 8. 「サムネイル画像」を生成して保存
-    $source_image = imagecreatefrompng($image_save_path); // 保存したファイルから読み込む
+    $source_image = imagecreatefrompng($image_save_path);
+    if ($source_image === false) {
+        throw new Exception("保存した画像ファイルからサムネイルを生成できませんでした。");
+    }
     $thumb_image = imagecreatetruecolor($thumb_width, $thumb_height);
     imagecopyresampled($thumb_image, $source_image, 0, 0, 0, 0, $thumb_width, $thumb_height, $image_width, $image_height);
     
@@ -148,11 +146,21 @@ try {
     // サーバーログに詳細なエラーを記録
     error_log("finalize_artwork.php Error: " . $e->getMessage());
     http_response_code(500);
-    // フロントエンドには、より一般的なメッセージを返す
-    echo json_encode(['error' => '画像生成中にサーバー内部でエラーが発生しました。']);
+    // ★★★ デバッグのため、フロントエンドに詳細なエラーメッセージを返す ★★★
+    echo json_encode(['error' => 'サーバーエラー: ' . $e->getMessage()]);
 }
 
-// ... (ヘルパー関数は変更なし) ...
-function latLonToTile($lat, $lon, $zoom) { /* ... */ }
-function latLonToPixel($lat, $lon, $zoom) { /* ... */ }
+// --- ヘルパー関数 ---
+function latLonToTile($lat, $lon, $zoom) {
+    $xtile = floor((($lon + 180) / 360) * pow(2, $zoom));
+    $ytile = floor((1 - log(tan(deg2rad($lat)) + 1 / cos(deg2rad($lat))) / pi()) / 2 * pow(2, $zoom));
+    return [$xtile, $ytile];
+}
+
+function latLonToPixel($lat, $lon, $zoom) {
+    $world_size = 256 * pow(2, $zoom);
+    $x = (($lon + 180) / 360) * $world_size;
+    $y = (1 - log(tan(deg2rad($lat)) + 1 / cos(deg2rad($lat))) / pi()) / 2 * $world_size;
+    return [$x, $y];
+}
 
