@@ -12,9 +12,7 @@
     <style>
         body { font-family: 'Hiragino Kaku Gothic ProN', 'Meiryo', sans-serif; }
         .hidden { display: none; }
-        /* 地図の高さ */
         #map { height: 400px; width: 100%; border-radius: 0.5rem; border: 1px solid #e2e8f0; }
-        /* ローディングスピナー */
         .loader { border-top-color: #14BE6F; animation: spin 1s linear infinite; }
         @keyframes spin { 100% { transform: rotate(360deg); } }
     </style>
@@ -76,12 +74,10 @@
     let currentUserMarker = null;
     let lastPage = 'gallery';
     
-    // ★★★ 修正点: DOM要素の変数をここで宣言だけしておく ★★★
     let loginSection, appContainer, loadingOverlay, sections;
 
     // --- イベントリスナー ---
     document.addEventListener('DOMContentLoaded', () => {
-        // ★★★ 修正点: DOMが読み込まれた後に要素を取得する ★★★
         loginSection = document.getElementById('login-section');
         appContainer = document.getElementById('app-container');
         loadingOverlay = document.getElementById('loading-overlay');
@@ -93,7 +89,6 @@
             myPage: document.getElementById('my-page-section'),
         };
         
-        // --- ここから下の初期化処理は変更なし ---
         loginSection.innerHTML = `
             <div class="bg-white p-8 rounded-2xl shadow-lg w-full max-w-md">
                 <h1 class="text-3xl font-bold text-center text-green-600 mb-2">足跡百景</h1>
@@ -192,6 +187,9 @@
         sections.gallery.innerHTML = `<div class="text-center p-8">読み込み中...</div>`;
         try {
             const responseData = await apiFetch('/get_public_artworks.php');
+            
+            // ★★★ ここを修正しました ★★★
+            // APIからの応答がオブジェクトの場合、中の配列を正しく取り出します。
             const artworks = Array.isArray(responseData) ? responseData : responseData.artwork_info;
 
             if (!Array.isArray(artworks)) {
@@ -199,17 +197,19 @@
             }
 
             let galleryHtml = '<div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">';
-            if (artworks.length === 0) {
+            const validArtworks = artworks.filter(art => art.thumbnail_url); 
+
+            if (validArtworks.length === 0) {
                  galleryHtml = '<div class="text-center p-8 text-gray-500">まだ公開された作品がありません。</div>';
             } else {
-                artworks.forEach(art => {
+                validArtworks.forEach(art => {
                     galleryHtml += `
                         <div class="cursor-pointer group" onclick="showArtworkDetailPage(${art.artwork_id})">
                             <div class="bg-white rounded-lg shadow-md overflow-hidden transform hover:scale-105 transition-transform">
                                 <img src="http://${location.hostname}${art.thumbnail_url}" alt="作品${art.artwork_id}" class="w-full h-48 object-cover bg-gray-200">
                                 <div class="p-3">
                                     <p class="font-bold truncate group-hover:text-green-600">${art.artwork_title || '無題の作品'}</p>
-                                    <p class="text-sm text-gray-500">${art.user_name}</p>
+                                    <p class="text-sm text-gray-500">${art.user_name || '不明な作者'}</p>
                                 </div>
                             </div>
                         </div>
@@ -230,17 +230,25 @@
         try {
             const endpoint = isMyPage ? `/get_my_artwork_detail.php?artwork_id=${artworkId}` : `/get_artwork.php?artwork_id=${artworkId}`;
             const data = await apiFetch(endpoint);
-            const art = data.artwork_info;
             
+            // ★★★ ここを修正しました ★★★
+            // データが artwork_info の中にネストされている場合に対応
+            const art = data.artwork_info;
+            const user = data.user_info;
+            
+            const imageUrl = art.image_url 
+                ? `http://${location.hostname}${art.image_url}` 
+                : `https://placehold.co/800x600/E2E8F0/A0AEC0?text=No+Image`;
+
             let userHtml = '';
-            if (data.user_info) {
-                 userHtml = `<p class="text-md text-gray-600 mt-2">作者: ${data.user_info.user_name}</p>`;
+            if (user) {
+                 userHtml = `<p class="text-md text-gray-600 mt-2">作者: ${user.user_name}</p>`;
             }
 
             sections.artworkDetail.innerHTML = `
                 <div class="bg-white p-6 rounded-lg shadow-md">
                     <button onclick="goBack()" class="mb-4 bg-gray-200 hover:bg-gray-300 px-4 py-2 rounded-lg text-sm">&lt; 戻る</button>
-                    <img src="http://${location.hostname}${art.image_url}" class="w-full rounded-lg shadow-sm bg-gray-200" alt="${art.artwork_title}">
+                    <img src="${imageUrl}" class="w-full rounded-lg shadow-sm bg-gray-200" alt="${art.artwork_title || '作品画像'}">
                     <h2 class="text-3xl font-bold mt-4">${art.artwork_title || '無題の作品'}</h2>
                     ${userHtml}
                     <p class="text-sm text-gray-500 mt-1">作成日: ${new Date(art.created_at).toLocaleString()}</p>
