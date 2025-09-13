@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>足跡百景 - デモ</title>
+    <title>足跡百景</title>
     <!-- Tailwind CSS (デザインを整える) -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Leaflet.js (地図ライブラリ) -->
@@ -11,58 +11,55 @@
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <style>
         body { font-family: 'Hiragino Kaku Gothic ProN', 'Meiryo', sans-serif; }
-        #map { height: calc(100vh - 250px); width: 100%; border-radius: 0.5rem; border: 1px solid #e2e8f0; }
         .hidden { display: none; }
-        /* ローディングスピナー */
-        .loader { border-top-color: #3498db; -webkit-animation: spin 1s linear infinite; animation: spin 1s linear infinite; }
-        @-webkit-keyframes spin { 0% { -webkit-transform: rotate(0deg); } 100% { -webkit-transform: rotate(360deg); } }
-        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        #map { height: 400px; width: 100%; border-radius: 0.5rem; border: 1px solid #e2e8f0; }
+        .loader { border-top-color: #14BE6F; animation: spin 1s linear infinite; }
+        @keyframes spin { 100% { transform: rotate(360deg); } }
     </style>
 </head>
 <body class="bg-gray-100 text-gray-800">
 
     <!-- ローディング画面 -->
-    <div id="loading-overlay" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-        <div class="loader ease-linear rounded-full border-8 border-t-8 border-gray-200 h-32 w-32"></div>
-        <p class="text-white text-2xl absolute">処理中...</p>
+    <div id="loading-overlay" class="hidden fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50">
+        <div class="loader ease-linear rounded-full border-8 border-t-8 border-gray-200 h-24 w-24"></div>
     </div>
 
-    <!-- ログイン画面 (最初はこれを表示) -->
-    <div id="login-section" class="min-h-screen flex items-center justify-center">
-        <div class="bg-white p-8 rounded-2xl shadow-lg w-full max-w-md">
-            <h1 class="text-3xl font-bold text-center text-green-600 mb-2">足跡百景</h1>
-            <p class="text-center text-gray-500 mb-6">ログインして、お絵かきを始めよう</p>
-            <input type="email" id="login-email" placeholder="メールアドレス" class="w-full p-3 mb-4 border rounded-lg" value="test@example.com">
-            <input type="password" id="login-password" placeholder="パスワード" class="w-full p-3 mb-4 border rounded-lg" value="password">
-            <button id="login-button" class="w-full bg-green-500 hover:bg-green-600 text-white p-3 rounded-lg font-bold">ログイン</button>
-            <p id="login-error" class="text-red-500 mt-4 text-center h-4"></p>
-            <p class="text-center text-sm text-gray-500 mt-4">
-              アカウントがない場合は <a href="/register.html" class="font-semibold text-blue-500 hover:underline">新規登録</a>
-            </p>
-        </div>
+    <!-- ログイン画面 -->
+    <div id="login-section" class="min-h-screen flex items-center justify-center p-4">
+        <!-- JavaScriptで動的に生成 -->
     </div>
 
-    <!-- 地図・お絵かき画面 (最初は非表示) -->
-    <div id="map-section" class="hidden">
-        <header class="bg-white p-4 shadow-md">
+    <!-- メインアプリケーション画面 (ログイン後に表示) -->
+    <div id="app-container" class="hidden flex flex-col min-h-screen">
+        <!-- ヘッダー -->
+        <header class="sticky top-0 z-40 bg-[#14BE6F] text-white p-4 shadow-md">
             <div class="container mx-auto flex justify-between items-center">
-                <h1 class="text-xl font-bold text-green-600">足跡百景 - お絵かきモード</h1>
+                <a href="#" id="nav-home" class="text-xl font-bold">足跡百景</a>
                 <div>
-                    <span id="user-name-display" class="mr-4 text-gray-600"></span>
-                    <button id="logout-button" class="bg-gray-200 hover:bg-gray-300 p-2 rounded text-sm">ログアウト</button>
+                    <span id="user-name-display" class="mr-4 text-sm font-semibold"></span>
+                    <button id="logout-button" class="bg-white/20 hover:bg-white/30 p-2 rounded text-sm font-semibold">ログアウト</button>
                 </div>
             </div>
         </header>
-        <div class="container mx-auto p-4">
-            <div class="bg-white p-6 rounded-lg shadow-md">
-                <div class="flex flex-col sm:flex-row justify-center items-center gap-4 mb-4">
-                    <button id="start-button" class="w-full sm:w-auto bg-green-500 hover:bg-green-600 text-white font-bold py-3 px-6 rounded-lg transition-transform transform hover:scale-105">お絵かきスタート</button>
-                    <button id="stop-button" class="w-full sm:w-auto bg-red-500 hover:bg-red-600 text-white font-bold py-3 px-6 rounded-lg transition-transform transform hover:scale-105" disabled>ストップ＆画像生成</button>
-                </div>
-                <div id="map"></div>
-                <div id="result-area" class="mt-4 text-center"></div>
-            </div>
-        </div>
+
+        <!-- メインコンテンツ (ここに各ページが表示される) -->
+        <main class="container mx-auto p-4 flex-grow w-full">
+            <div id="gallery-section"></div>
+            <div id="artwork-detail-section" class="hidden"></div>
+            <div id="map-section" class="hidden"></div>
+            <div id="template-section" class="hidden"></div>
+            <div id="my-page-section" class="hidden"></div>
+        </main>
+
+        <!-- フッター -->
+        <footer class="bg-gray-800 text-white p-4 shadow-inner">
+            <nav class="container mx-auto flex justify-center items-center gap-6 text-sm">
+                <a href="#" id="nav-gallery" class="hover:text-green-400 font-semibold">足跡百景</a>
+                <a href="#" id="nav-draw" class="hover:text-green-400">書く</a>
+                <a href="#" id="nav-template" class="hover:text-green-400">なぞり型</a>
+                <a href="#" id="nav-my-page" class="hover:text-green-400">マイページ</a>
+            </nav>
+        </footer>
     </div>
 
 <script>
@@ -70,25 +67,70 @@
     const API_BASE_URL = 'http://163.43.104.210/gps_art_app/api';
 
     // --- グローバル変数 ---
-    let map, polyline, token = null, isDrawing = false, currentArtworkId = null;
+    let token = null;
+    let map, polyline, isDrawing = false, currentArtworkId = null;
     let points = [];
-
-    // --- DOM要素 ---
-    const loginSection = document.getElementById('login-section');
-    const mapSection = document.getElementById('map-section');
-    const loadingOverlay = document.getElementById('loading-overlay');
+    let watchId = null;
+    let currentUserMarker = null;
+    let lastPage = 'gallery';
     
+    let loginSection, appContainer, loadingOverlay, sections;
+
     // --- イベントリスナー ---
     document.addEventListener('DOMContentLoaded', () => {
+        loginSection = document.getElementById('login-section');
+        appContainer = document.getElementById('app-container');
+        loadingOverlay = document.getElementById('loading-overlay');
+        sections = {
+            gallery: document.getElementById('gallery-section'),
+            artworkDetail: document.getElementById('artwork-detail-section'),
+            map: document.getElementById('map-section'),
+            template: document.getElementById('template-section'),
+            myPage: document.getElementById('my-page-section'),
+        };
+        
+        loginSection.innerHTML = `
+            <div class="bg-white p-8 rounded-2xl shadow-lg w-full max-w-md">
+                <h1 class="text-3xl font-bold text-center text-green-600 mb-2">足跡百景</h1>
+                <p class="text-center text-gray-500 mb-6">ようこそ！</p>
+                <input type="email" id="login-email" placeholder="メールアドレス" class="w-full p-3 mb-4 border rounded-lg" value="">
+                <input type="password" id="login-password" placeholder="パスワード" class="w-full p-3 mb-4 border rounded-lg" value="">
+                <button id="login-button" class="w-full bg-green-500 hover:bg-green-600 text-white p-3 rounded-lg font-bold">ログイン</button>
+                <p id="login-error" class="text-red-500 mt-4 text-center h-4"></p>
+                <p class="text-center text-sm text-gray-500 mt-4">
+                  アカウントがない場合は <a href="/register.html" class="font-semibold text-blue-500 hover:underline">新規登録</a>
+                </p>
+            </div>`;
         document.getElementById('login-button').addEventListener('click', handleLogin);
+        
         document.getElementById('logout-button').addEventListener('click', handleLogout);
-        document.getElementById('start-button').addEventListener('click', handleStartDrawing);
-        document.getElementById('stop-button').addEventListener('click', handleStopDrawing);
+        document.getElementById('nav-home').addEventListener('click', (e) => { e.preventDefault(); showGalleryPage(); });
+        document.getElementById('nav-gallery').addEventListener('click', (e) => { e.preventDefault(); showGalleryPage(); });
+        document.getElementById('nav-draw').addEventListener('click', (e) => { e.preventDefault(); showDrawPage(); });
+        document.getElementById('nav-template').addEventListener('click', (e) => { e.preventDefault(); showTemplatePage(); });
+        document.getElementById('nav-my-page').addEventListener('click', (e) => { e.preventDefault(); showMyPage(); });
+
+        token = localStorage.getItem('ashidori_token');
+        if (token) {
+            loginSection.classList.add('hidden');
+            appContainer.classList.remove('hidden');
+            showGalleryPage();
+        } else {
+            loginSection.classList.remove('hidden');
+            appContainer.classList.add('hidden');
+        }
     });
     
     // --- UI制御 ---
     const showLoading = () => loadingOverlay.classList.remove('hidden');
     const hideLoading = () => loadingOverlay.classList.add('hidden');
+
+    function showSection(sectionName) {
+        Object.values(sections).forEach(section => section.classList.add('hidden'));
+        if (sections[sectionName]) {
+            sections[sectionName].classList.remove('hidden');
+        }
+    }
 
     // --- API通信 ---
     async function apiFetch(endpoint, options = {}) {
@@ -100,7 +142,7 @@
             }
             const response = await fetch(`${API_BASE_URL}${endpoint}`, { ...options, headers });
             const result = await response.json();
-            if (!response.ok) throw new Error(result.error || '不明なエラー');
+            if (!response.ok) throw new Error(result.error || '不明なエラーが発生しました。');
             return result;
         } catch (error) {
             console.error('API Error:', error);
@@ -116,17 +158,17 @@
         const password = document.getElementById('login-password').value;
         const errorEl = document.getElementById('login-error');
         errorEl.textContent = '';
-
         try {
             const data = await apiFetch('/login.php', {
                 method: 'POST',
                 body: JSON.stringify({ email, password })
             });
             token = data.token;
+            localStorage.setItem('ashidori_token', data.token);
             loginSection.classList.add('hidden');
-            mapSection.classList.remove('hidden');
+            appContainer.classList.remove('hidden');
             document.getElementById('user-name-display').textContent = `ようこそ、${data.user.user_name}さん`;
-            initMap();
+            showGalleryPage();
         } catch (error) {
             errorEl.textContent = error.message;
         }
@@ -134,49 +176,239 @@
 
     function handleLogout() {
         token = null;
-        loginSection.classList.remove('hidden');
-        mapSection.classList.add('hidden');
+        localStorage.removeItem('ashidori_token');
+        location.reload();
     }
     
-    // --- 地図・お絵かき ---
+    // --- ページ表示ロジック ---
+    async function showGalleryPage() {
+        lastPage = 'gallery';
+        showSection('gallery');
+        sections.gallery.innerHTML = `<div class="text-center p-8">読み込み中...</div>`;
+        try {
+            const artworks = await apiFetch('/get_public_artworks.php');
+            
+            if (!Array.isArray(artworks)) {
+                throw new Error('サーバーから予期しない形式のデータが返されました。');
+            }
+
+            let galleryHtml = '<div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">';
+            const validArtworks = artworks.filter(art => art.thumbnail_url); 
+
+            if (validArtworks.length === 0) {
+                 galleryHtml = '<div class="text-center p-8 text-gray-500">まだ公開された作品がありません。</div>';
+            } else {
+                validArtworks.forEach(art => {
+                    galleryHtml += `
+                        <div class="cursor-pointer group" onclick="showArtworkDetailPage(${art.artwork_id})">
+                            <div class="bg-white rounded-lg shadow-md overflow-hidden transform hover:scale-105 transition-transform">
+                                <img src="http://${location.hostname}${art.thumbnail_url}" alt="作品${art.artwork_id}" class="w-full h-48 object-cover bg-gray-200">
+                                <div class="p-3">
+                                    <p class="font-bold truncate group-hover:text-green-600">${art.artwork_title || '無題の作品'}</p>
+                                    <p class="text-sm text-gray-500">${art.user_name || '不明な作者'}</p>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                });
+                galleryHtml += '</div>';
+            }
+            sections.gallery.innerHTML = galleryHtml;
+        } catch (error) {
+            sections.gallery.innerHTML = `<div class="text-center p-8 text-red-500">エラー: ${error.message}</div>`;
+        }
+    }
+
+    async function showArtworkDetailPage(artworkId, isMyPage = false) {
+        lastPage = isMyPage ? 'myPage' : 'gallery';
+        showSection('artworkDetail');
+        sections.artworkDetail.innerHTML = `<div class="text-center p-8">読み込み中...</div>`;
+        try {
+            const endpoint = isMyPage ? `/get_my_artwork_detail.php?artwork_id=${artworkId}` : `/get_artwork.php?artwork_id=${artworkId}`;
+            const data = await apiFetch(endpoint);
+            const art = data.artwork_info;
+            const user = data.user_info;
+            
+            // ★★★ ここを修正しました ★★★
+            const imageUrl = art.image_url 
+                ? `http://${location.hostname}${art.image_url}` 
+                : `https://placehold.co/800x600/E2E8F0/A0AEC0?text=No+Image`; // 存在しない場合はプレースホルダーを表示
+
+            let userHtml = '';
+            if (user) {
+                 userHtml = `<p class="text-md text-gray-600 mt-2">作者: ${user.user_name}</p>`;
+            }
+
+            sections.artworkDetail.innerHTML = `
+                <div class="bg-white p-6 rounded-lg shadow-md">
+                    <button onclick="goBack()" class="mb-4 bg-gray-200 hover:bg-gray-300 px-4 py-2 rounded-lg text-sm">&lt; 戻る</button>
+                    <img src="${imageUrl}" class="w-full rounded-lg shadow-sm bg-gray-200" alt="${art.artwork_title || '作品画像'}">
+                    <h2 class="text-3xl font-bold mt-4">${art.artwork_title || '無題の作品'}</h2>
+                    ${userHtml}
+                    <p class="text-sm text-gray-500 mt-1">作成日: ${new Date(art.created_at).toLocaleString()}</p>
+                    <p class="mt-4 whitespace-pre-wrap">${art.description || '説明はありません。'}</p>
+                </div>
+            `;
+        } catch (error) {
+             sections.artworkDetail.innerHTML = `<div class="text-center p-8 text-red-500">エラー: ${error.message}</div>`;
+        }
+    }
+    
+    function goBack() {
+        if (lastPage === 'myPage') showMyPage();
+        else showGalleryPage();
+    }
+
+    function showDrawPage() {
+        lastPage = 'draw';
+        showSection('map');
+        sections.map.innerHTML = `
+            <div class="bg-white p-6 rounded-lg shadow-md h-full flex flex-col">
+                <div class="flex flex-col sm:flex-row justify-center items-center gap-4 mb-4">
+                    <button id="start-button" class="w-full sm:w-auto bg-green-500 hover:bg-green-600 text-white font-bold py-3 px-6 rounded-lg">お絵かきスタート</button>
+                    <button id="stop-button" class="w-full sm:w-auto bg-red-500 hover:bg-red-600 text-white font-bold py-3 px-6 rounded-lg" disabled>ストップ＆画像生成</button>
+                </div>
+                <div id="map" class="flex-grow"></div>
+                <div class="text-center mt-4">
+                    <a href="demo2.html" class="text-sm text-blue-500 hover:underline">うまくいかない場合はこちら</a>
+                </div>
+                <div id="result-area" class="mt-4 text-center"></div>
+            </div>`;
+        document.getElementById('start-button').addEventListener('click', handleStartDrawing);
+        document.getElementById('stop-button').addEventListener('click', handleStopDrawing);
+        initMap();
+    }
+
+    function showTemplatePage() {
+        lastPage = 'template';
+        showSection('template');
+        sections.template.innerHTML = `
+            <div class="bg-white p-8 rounded-lg shadow-md text-center">
+                <h2 class="text-2xl font-bold text-gray-700">Coming Soon...</h2>
+                <p class="mt-2 text-gray-500">「なぞり型」機能は現在準備中です。お楽しみに！</p>
+            </div>
+        `;
+    }
+
+    async function showMyPage() {
+        lastPage = 'myPage';
+        showSection('myPage');
+        sections.myPage.innerHTML = `<div class="text-center p-8">読み込み中...</div>`;
+        try {
+            const data = await apiFetch('/get_my_page.php');
+            const user = data.user_info;
+            const artworks = data.artworks;
+
+            let myGalleryHtml = '<div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">';
+            const validMyArtworks = artworks.filter(art => art.thumbnail_url);
+
+            if (validMyArtworks.length === 0) {
+                 myGalleryHtml = '<div class="text-center py-8 text-gray-500">まだあなたの作品はありません。</div>';
+            } else {
+                validMyArtworks.forEach(art => {
+                     myGalleryHtml += `
+                        <div class="cursor-pointer group" onclick="showArtworkDetailPage(${art.artwork_id}, true)">
+                             <div class="bg-white rounded-lg shadow-md overflow-hidden transform hover:scale-105 transition-transform">
+                                 <img src="http://${location.hostname}${art.thumbnail_url}" alt="作品${art.artwork_id}" class="w-full h-48 object-cover bg-gray-200">
+                                 <div class="p-3">
+                                     <p class="font-bold truncate group-hover:text-green-600">作品 #${art.artwork_id}</p>
+                                 </div>
+                             </div>
+                         </div>`;
+                });
+                myGalleryHtml += '</div>';
+            }
+            
+            sections.myPage.innerHTML = `
+                <div class="bg-white p-6 rounded-lg shadow-md mb-6">
+                    <div class="flex items-center gap-4">
+                        <img src="${user.icon_image_url || 'https://placehold.co/128x128/E2E8F0/A0AEC0?text=Icon'}" class="w-24 h-24 rounded-full object-cover border-4 border-green-200">
+                        <div>
+                            <h2 class="text-3xl font-bold">${user.user_name}</h2>
+                            <p class="text-gray-600 mt-1">${user.bio || '自己紹介がありません。'}</p>
+                        </div>
+                    </div>
+                </div>
+                <div>
+                    <h3 class="text-2xl font-semibold mb-4">あなたの作品一覧</h3>
+                    ${myGalleryHtml}
+                </div>
+            `;
+        } catch (error) {
+            sections.myPage.innerHTML = `<div class="text-center p-8 text-red-500">エラー: ${error.message}</div>`;
+        }
+    }
+
     function initMap() {
-        if (map) map.remove(); // 既存のマップを削除
-        map = L.map('map').setView([34.07, 134.55], 13); // 初期位置を徳島に
+        if (map) map.remove(); 
+        map = L.map('map').setView([34.07, 134.55], 13);
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
         
+        currentUserMarker = L.circleMarker([0,0], { radius: 8, color: 'blue', fillColor: '#3498db', fillOpacity: 0.8 }).addTo(map);
+
         navigator.geolocation.getCurrentPosition(
-            (pos) => map.setView([pos.coords.latitude, pos.coords.longitude], 16),
-            () => console.warn('現在地を取得できませんでした。')
+            (pos) => {
+                const latLng = [pos.coords.latitude, pos.coords.longitude];
+                map.setView(latLng, 16);
+                currentUserMarker.setLatLng(latLng);
+            },
+            () => console.warn('現在地を取得できませんでした。'),
+            { enableHighAccuracy: true }
         );
 
         polyline = L.polyline([], { color: '#14BE6F', weight: 5 }).addTo(map);
-        
-        map.on('mousemove', (e) => {
-            if (isDrawing) {
-                const newPoint = { latitude: e.latlng.lat, longitude: e.latlng.lng };
-                points.push(newPoint);
-                polyline.addLatLng(e.latlng);
-            }
-        });
     }
 
     async function handleStartDrawing() {
         try {
             const data = await apiFetch('/create_artwork.php', { method: 'POST' });
             currentArtworkId = data.artwork_id;
-            isDrawing = true;
             points = [];
             polyline.setLatLngs([]);
+            document.getElementById('result-area').innerHTML = '';
+            
+            if (!navigator.geolocation) {
+                alert('お使いのブラウザはGPS機能に対応していません。');
+                return;
+            }
+
+            watchId = navigator.geolocation.watchPosition(
+                (position) => {
+                    const lat = position.coords.latitude;
+                    const lng = position.coords.longitude;
+                    const latLng = [lat, lng];
+                    currentUserMarker.setLatLng(latLng);
+                    map.panTo(latLng);
+                    if (isDrawing) {
+                        const newPoint = { latitude: lat, longitude: lng };
+                        points.push(newPoint);
+                        polyline.addLatLng(latLng);
+                    }
+                },
+                (error) => {
+                    console.error("GPS Error:", error.message);
+                    alert("GPSの測位に失敗しました。場所の権限が許可されているか確認してください。");
+                    handleStopDrawing();
+                },
+                { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+            );
+
+            isDrawing = true;
             document.getElementById('start-button').disabled = true;
             document.getElementById('stop-button').disabled = false;
-            document.getElementById('result-area').innerHTML = '';
-            alert(`お絵かきを開始しました！(作品ID: ${currentArtworkId}) 地図上をマウスでなぞって軌跡を描いてください。`);
+            alert(`お絵かきを開始しました！(作品ID: ${currentArtworkId})`);
+
         } catch (error) {
             alert(`エラー: ${error.message}`);
         }
     }
 
     async function handleStopDrawing() {
+        if (watchId) {
+            navigator.geolocation.clearWatch(watchId);
+            watchId = null;
+        }
+        
         if (!isDrawing) return;
         isDrawing = false;
         
@@ -208,7 +440,6 @@
             alert(`保存エラー: ${error.message}`);
         }
     }
-
 </script>
 </body>
 </html>
