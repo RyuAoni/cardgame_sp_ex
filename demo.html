@@ -19,19 +19,12 @@
 </head>
 <body class="bg-gray-100 text-gray-800">
 
-    <!-- ローディング画面 -->
+    <!-- (HTML部分は変更ありません) -->
     <div id="loading-overlay" class="hidden fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50">
         <div class="loader ease-linear rounded-full border-8 border-t-8 border-gray-200 h-24 w-24"></div>
     </div>
-
-    <!-- ログイン画面 -->
-    <div id="login-section" class="min-h-screen flex items-center justify-center p-4">
-        <!-- JavaScriptで動的に生成 -->
-    </div>
-
-    <!-- メインアプリケーション画面 (ログイン後に表示) -->
+    <div id="login-section" class="min-h-screen flex items-center justify-center p-4"></div>
     <div id="app-container" class="hidden flex flex-col min-h-screen">
-        <!-- ヘッダー -->
         <header class="sticky top-0 z-40 bg-[#14BE6F] text-white p-4 shadow-md">
             <div class="container mx-auto flex justify-between items-center">
                 <a href="#" id="nav-home" class="text-xl font-bold">足跡百景</a>
@@ -41,8 +34,6 @@
                 </div>
             </div>
         </header>
-
-        <!-- メインコンテンツ (ここに各ページが表示される) -->
         <main class="container mx-auto p-4 flex-grow w-full">
             <div id="gallery-section"></div>
             <div id="artwork-detail-section" class="hidden"></div>
@@ -50,8 +41,6 @@
             <div id="template-section" class="hidden"></div>
             <div id="my-page-section" class="hidden"></div>
         </main>
-
-        <!-- フッター -->
         <footer class="bg-gray-800 text-white p-4 shadow-inner">
             <nav class="container mx-auto flex justify-center items-center gap-6 text-sm">
                 <a href="#" id="nav-gallery" class="hover:text-green-400 font-semibold">足跡百景</a>
@@ -63,20 +52,15 @@
     </div>
 
 <script>
-    // --- ★★★ 設定項目 ★★★ ---
     const API_BASE_URL = 'http://163.43.104.210/gps_art_app/api';
-
-    // --- グローバル変数 ---
     let token = null;
     let map, polyline, isDrawing = false, currentArtworkId = null;
     let points = [];
     let watchId = null;
     let currentUserMarker = null;
     let lastPage = 'gallery';
-    
     let loginSection, appContainer, loadingOverlay, sections;
 
-    // --- イベントリスナー ---
     document.addEventListener('DOMContentLoaded', () => {
         loginSection = document.getElementById('login-section');
         appContainer = document.getElementById('app-container');
@@ -121,7 +105,6 @@
         }
     });
     
-    // --- UI制御 ---
     const showLoading = () => loadingOverlay.classList.remove('hidden');
     const hideLoading = () => loadingOverlay.classList.add('hidden');
 
@@ -142,6 +125,10 @@
             }
             const response = await fetch(`${API_BASE_URL}${endpoint}`, { ...options, headers });
             const result = await response.json();
+
+            // ★★★ ここにconsole.logを追加しました ★★★
+            console.log('APIからデータを受信:', { endpoint: endpoint, data: result });
+
             if (!response.ok) throw new Error(result.error || '不明なエラーが発生しました。');
             return result;
         } catch (error) {
@@ -152,7 +139,7 @@
         }
     }
 
-    // --- 認証ハンドラ ---
+    // --- (以降の関数は変更ありません) ---
     async function handleLogin() {
         const email = document.getElementById('login-email').value;
         const password = document.getElementById('login-password').value;
@@ -180,25 +167,18 @@
         location.reload();
     }
     
-    // --- ページ表示ロジック ---
     async function showGalleryPage() {
         lastPage = 'gallery';
         showSection('gallery');
         sections.gallery.innerHTML = `<div class="text-center p-8">読み込み中...</div>`;
         try {
             const responseData = await apiFetch('/get_public_artworks.php');
-            
-            // ★★★ ここを修正しました ★★★
-            // APIからの応答がオブジェクトの場合、中の配列を正しく取り出します。
             const artworks = Array.isArray(responseData) ? responseData : responseData.artwork_info;
-
             if (!Array.isArray(artworks)) {
                 throw new Error('サーバーから予期しない形式のデータが返されました。');
             }
-
             let galleryHtml = '<div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">';
             const validArtworks = artworks.filter(art => art.thumbnail_url); 
-
             if (validArtworks.length === 0) {
                  galleryHtml = '<div class="text-center p-8 text-gray-500">まだ公開された作品がありません。</div>';
             } else {
@@ -230,21 +210,15 @@
         try {
             const endpoint = isMyPage ? `/get_my_artwork_detail.php?artwork_id=${artworkId}` : `/get_artwork.php?artwork_id=${artworkId}`;
             const data = await apiFetch(endpoint);
-            
-            // ★★★ ここを修正しました ★★★
-            // データが artwork_info の中にネストされている場合に対応
             const art = data.artwork_info;
             const user = data.user_info;
-            
             const imageUrl = art.image_url 
                 ? `http://${location.hostname}${art.image_url}` 
                 : `https://placehold.co/800x600/E2E8F0/A0AEC0?text=No+Image`;
-
             let userHtml = '';
             if (user) {
                  userHtml = `<p class="text-md text-gray-600 mt-2">作者: ${user.user_name}</p>`;
             }
-
             sections.artworkDetail.innerHTML = `
                 <div class="bg-white p-6 rounded-lg shadow-md">
                     <button onclick="goBack()" class="mb-4 bg-gray-200 hover:bg-gray-300 px-4 py-2 rounded-lg text-sm">&lt; 戻る</button>
@@ -268,7 +242,6 @@
     function showDrawPage() {
         lastPage = 'draw';
         showSection('map');
-        // ★★★ ここを修正しました ★★★
         sections.map.innerHTML = `
             <div class="bg-white p-6 rounded-lg shadow-md h-full flex flex-col">
                 <div class="flex flex-col sm:flex-row justify-center items-center gap-4 mb-4">
@@ -305,12 +278,12 @@
             const data = await apiFetch('/get_my_page.php');
             const user = data.user_info;
             const artworks = data.artworks;
-
             let myGalleryHtml = '<div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">';
-            if (artworks.length === 0) {
+            const validMyArtworks = artworks.filter(art => art.thumbnail_url);
+            if (validMyArtworks.length === 0) {
                  myGalleryHtml = '<div class="text-center py-8 text-gray-500">まだあなたの作品はありません。</div>';
             } else {
-                artworks.forEach(art => {
+                validMyArtworks.forEach(art => {
                      myGalleryHtml += `
                         <div class="cursor-pointer group" onclick="showArtworkDetailPage(${art.artwork_id}, true)">
                              <div class="bg-white rounded-lg shadow-md overflow-hidden transform hover:scale-105 transition-transform">
